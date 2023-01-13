@@ -37,10 +37,23 @@ export interface Settings {
     name?: string;
     displayMode: VideoDisplayMode;
     preferCodec?: PreferredCodec;
+    maxBitrate?: number;
+    videoConstraints?: VideoConstraints;
+    audioConstraints?: AudioConstraints;
 }
 export interface PreferredCodec {
     mimeType: string;
     sdpFmtpLine?: string;
+}
+export interface VideoConstraints {
+    width?: number;
+    height?: number;
+    frameRate?: number;
+}
+export interface AudioConstraints {
+    autoGainControl?: boolean;
+    echoCancellation?: boolean;
+    noiseSuppression?: boolean;
 }
 
 export enum VideoDisplayMode {
@@ -57,15 +70,35 @@ export const loadSettings = (): Settings => {
 
     const defaults: Settings = {
         displayMode: VideoDisplayMode.FitToWindow,
+        maxBitrate: 4194304,
+        videoConstraints: {
+            width: 1280,
+            height: 720,
+            frameRate: 30,
+        },
+        audioConstraints: {
+            autoGainControl: false,
+            echoCancellation: false,
+            noiseSuppression: false,
+        },
     };
 
     if (settings && typeof settings === 'object') {
         return {
+            ...defaults,
             ...settings,
             displayMode:
                 Object.values(VideoDisplayMode).find((mode) => mode === settings.displayMode) ??
                 VideoDisplayMode.FitToWindow,
             preferCodec: settings.preferCodec ?? CodecDefault,
+            videoConstraints: {
+                ...defaults.videoConstraints,
+                ...settings.videoConstraints,
+            },
+            audioConstraints: {
+                ...defaults.audioConstraints,
+                ...settings.audioConstraints,
+            },
         };
     }
     return defaults;

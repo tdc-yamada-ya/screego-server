@@ -74,7 +74,9 @@ const hostSession = async ({
 
     stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
-    const preferCodec = resolveCodecPlaceholder(loadSettings().preferCodec);
+    const settings = loadSettings();
+
+    const preferCodec = resolveCodecPlaceholder(settings.preferCodec);
     if (preferCodec) {
         const transceiver = peer
             .getTransceivers()
@@ -106,6 +108,18 @@ const hostSession = async ({
 
     const hostOffer = await peer.createOffer({offerToReceiveVideo: true});
     await peer.setLocalDescription(hostOffer);
+
+    for (const sender of peer.getSenders()) {
+        if (sender.track?.kind === 'video') {
+            const params = sender.getParameters();
+            if (!params.encodings || params.encodings.length === 0) {
+                params.encodings = [{}];
+            }
+            params.encodings[0].maxBitrate = settings.maxBitrate;
+            await sender.setParameters(params);
+        }
+    }
+
     send({type: 'hostoffer', payload: {value: hostOffer, sid: sid}});
 
     return peer;
@@ -143,11 +157,11 @@ const clientSession = async ({
             done();
         }
     };
+    const stream = new MediaStream();
     peer.ontrack = (event) => {
-        const stream = new MediaStream();
         stream.addTrack(event.track);
-        onTrack(stream);
     };
+    onTrack(stream);
 
     return peer;
 };
@@ -326,9 +340,11 @@ export const useRoom = (config: UIConfig): UseRoom => {
             );
             return;
         }
-        stream.current = await navigator.mediaDevices
-            // @ts-ignore
-            .getDisplayMedia({video: true});
+        const settings = loadSettings();
+        stream.current = await navigator.mediaDevices.getDisplayMedia({
+            video: settings.videoConstraints,
+            audio: settings.audioConstraints,
+        });
         stream.current?.getVideoTracks()[0].addEventListener('ended', () => stopShare());
         setState((current) => (current ? {...current, hostStream: stream.current} : current));
 
