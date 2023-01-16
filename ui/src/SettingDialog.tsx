@@ -186,7 +186,7 @@ export const SettingDialog = ({open, setOpen, updateName, saveSettings}: Setting
                                 label="Auto Gain Control"
                                 control={
                                     <Checkbox
-                                        value={audioConstraints?.autoGainControl}
+                                        checked={audioConstraints?.autoGainControl}
                                         onChange={(e) =>
                                             setSettingsInput((c) => ({
                                                 ...c,
@@ -203,7 +203,7 @@ export const SettingDialog = ({open, setOpen, updateName, saveSettings}: Setting
                                 label="Echo Cancellation"
                                 control={
                                     <Checkbox
-                                        value={audioConstraints?.echoCancellation}
+                                        checked={audioConstraints?.echoCancellation}
                                         onChange={(e) =>
                                             setSettingsInput((c) => ({
                                                 ...c,
@@ -220,7 +220,7 @@ export const SettingDialog = ({open, setOpen, updateName, saveSettings}: Setting
                                 label="Noise Suppression"
                                 control={
                                     <Checkbox
-                                        value={audioConstraints?.noiseSuppression}
+                                        checked={audioConstraints?.noiseSuppression}
                                         onChange={(e) =>
                                             setSettingsInput((c) => ({
                                                 ...c,
