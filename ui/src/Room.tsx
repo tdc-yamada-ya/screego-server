@@ -1,5 +1,5 @@
 import React, {useCallback} from 'react';
-import {Badge, IconButton, Paper, Theme, Tooltip, Typography} from '@mui/material';
+import {Badge, IconButton, Paper, Theme, Tooltip, Typography, Stack, Slider} from '@mui/material';
 import CancelPresentationIcon from '@mui/icons-material/CancelPresentation';
 import PresentToAllIcon from '@mui/icons-material/PresentToAll';
 import FullScreenIcon from '@mui/icons-material/Fullscreen';
@@ -72,6 +72,8 @@ export const Room = ({
     const [hoverControl, setHoverControl] = React.useState(false);
     const [selectedStream, setSelectedStream] = React.useState<string | typeof HostStream>();
     const [videoElement, setVideoElement] = React.useState<FullScreenHTMLVideoElement | null>(null);
+    const [muted, setMuted] = React.useState<boolean>(false);
+    const [volume, setVolume] = React.useState<number>(0.5);
 
     useShowOnMouseMovement(setShowControl);
 
@@ -102,6 +104,26 @@ export const Room = ({
             videoElement.play();
         }
     }, [videoElement, stream]);
+
+    const initVideoElement = (element: FullScreenHTMLVideoElement | null) => {
+        if (element) {
+            element.muted = muted;
+            element.volume = volume;
+        }
+        setVideoElement(element);
+    };
+
+    React.useEffect(() => {
+        if (videoElement) {
+            setMuted(videoElement.muted);
+            const listener = () => {
+                setMuted(videoElement.muted);
+                setVolume(videoElement.volume);
+            };
+            videoElement.addEventListener('volumechange', listener);
+            return () => videoElement.removeEventListener('volumechange', listener);
+        }
+    }, [videoElement]);
 
     const copyLink = () => {
         navigator?.clipboard?.writeText(window.location.href)?.then(
@@ -195,7 +217,7 @@ export const Room = ({
             )}
 
             {stream ? (
-                <video muted ref={setVideoElement} className={videoClasses()} />
+                <video muted ref={initVideoElement} className={videoClasses()} />
             ) : (
                 <Typography
                     variant="h4"
@@ -214,74 +236,83 @@ export const Room = ({
 
             {controlVisible && (
                 <Paper className={classes.control} elevation={10} {...setHoverState}>
-                    {state.hostStream ? (
-                        <Tooltip title="Cancel Presentation" arrow>
-                            <IconButton onClick={stopShare} size="large">
-                                <CancelPresentationIcon fontSize="large" />
-                            </IconButton>
-                        </Tooltip>
-                    ) : (
-                        <Tooltip title="Start Presentation" arrow>
-                            <IconButton onClick={share} size="large">
-                                <PresentToAllIcon fontSize="large" />
-                            </IconButton>
-                        </Tooltip>
-                    )}
+                    <Stack direction="row" alignItems="center">
+                        {state.hostStream ? (
+                            <Tooltip title="Cancel Presentation" arrow>
+                                <IconButton onClick={stopShare} size="large">
+                                    <CancelPresentationIcon fontSize="large" />
+                                </IconButton>
+                            </Tooltip>
+                        ) : (
+                            <Tooltip title="Start Presentation" arrow>
+                                <IconButton onClick={share} size="large">
+                                    <PresentToAllIcon fontSize="large" />
+                                </IconButton>
+                            </Tooltip>
+                        )}
 
-                    <Tooltip
-                        classes={{tooltip: classes.noMaxWidth}}
-                        title={
-                            <div>
-                                <Typography variant="h5">Member List</Typography>
-                                {state.users.map((user) => (
-                                    <Typography key={user.id}>
-                                        {user.name} {flags(user)}
-                                    </Typography>
-                                ))}
-                            </div>
-                        }
-                        arrow
-                    >
-                        <Badge badgeContent={state.users.length} color="primary">
-                            <PeopleIcon fontSize="large" />
-                        </Badge>
-                    </Tooltip>
-                    <Tooltip title="Sound" arrow>
-                        <span>
-                            <IconButton
-                                onClick={() => {
-                                    const video = videoElement as HTMLMediaElement;
-                                    if (video) {
-                                        video.muted = !video.muted;
-                                    }
-                                }}
-                                disabled={!selectedStream || !!state.hostStream}
-                            >
-                                {videoElement?.muted ? (
-                                    <VolumeMuteIcon fontSize="large" />
-                                ) : (
-                                    <VolumeUpIcon fontSize="large" />
-                                )}
-                            </IconButton>
-                        </span>
-                    </Tooltip>
-                    <Tooltip title="Fullscreen" arrow>
-                        <span>
-                            <IconButton
-                                onClick={() => handleFullscreen()}
-                                disabled={!selectedStream}
-                                size="large"
-                            >
-                                <FullScreenIcon fontSize="large" />
-                            </IconButton>
-                        </span>
-                    </Tooltip>
-
-                    <Tooltip title="Settings" arrow>
-                        <IconButton onClick={() => setOpen(true)} size="large">
-                            <SettingsIcon fontSize="large" />
+                        <Tooltip
+                            classes={{tooltip: classes.noMaxWidth}}
+                            title={
+                                <div>
+                                    <Typography variant="h5">Member List</Typography>
+                                    {state.users.map((user) => (
+                                        <Typography key={user.id}>
+                                            {user.name} {flags(user)}
+                                        </Typography>
+                                    ))}
+                                </div>
+                            }
+                            arrow
+                        >
+                            <Badge badgeContent={state.users.length} color="primary">
+                                <PeopleIcon fontSize="large" />
+                            </Badge>
+                        </Tooltip>
+                        <IconButton
+                            onClick={() => {
+                                const video = videoElement as HTMLMediaElement;
+                                if (video) {
+                                    video.muted = !video.muted;
+                                }
+                            }}
+                            disabled={!selectedStream || !!state.hostStream}
+                        >
+                            {muted ? (
+                                <VolumeMuteIcon fontSize="large" />
+                            ) : (
+                                <VolumeUpIcon fontSize="large" />
+                            )}
                         </IconButton>
-                    </Tooltip>
+                        <Slider
+                            sx={{width: '100px'}}
+                            value={volume * 100}
+                            onChange={(_e, v) => {
+                                const video = videoElement as HTMLMediaElement;
+                                if (video) {
+                                    video.volume = (v as number) / 100;
+                                }
+                            }}
+                            disabled={!selectedStream || !!state.hostStream}
+                        />
+                        <Tooltip title="Fullscreen" arrow>
+                            <span>
+                                <IconButton
+                                    onClick={() => handleFullscreen()}
+                                    disabled={!selectedStream}
+                                    size="large"
+                                >
+                                    <FullScreenIcon fontSize="large" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+
+                        <Tooltip title="Settings" arrow>
+                            <IconButton onClick={() => setOpen(true)} size="large">
+                                <SettingsIcon fontSize="large" />
+                            </IconButton>
+                        </Tooltip>
+                    </Stack>
                 </Paper>
             )}
 
@@ -389,7 +420,7 @@ const useStyles = makeStyles((theme: Theme) => ({
         zIndex: 20,
     },
     control: {
-        padding: 15,
+        padding: 4,
         position: 'fixed',
         background: theme.palette.background.paper,
         bottom: '30px',
